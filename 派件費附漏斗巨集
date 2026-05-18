@@ -2,23 +2,18 @@ Sub 派件費計算與分發()
     Dim ws As Worksheet
     Dim wb As Workbook
     Set wb = ActiveWorkbook
-    
-    ' 關閉螢幕更新加速運行，避免畫面閃爍
+
     Application.ScreenUpdating = False
-    
-    ' ==========================================
-    ' ★ 防呆機制：強制鎖定 "漏斗" 總表
-    ' ==========================================
+
     On Error Resume Next
     Set ws = wb.Sheets("漏斗")
     On Error GoTo 0
     
     If ws Is Nothing Then
-        ' 如果找不到叫漏斗的表，就把當前啟用的表當成漏斗並改名
         Set ws = ActiveSheet
         ws.Name = "漏斗"
     End If
-    ws.Activate ' 強制啟用漏斗表，確保後續設定生效
+    ws.Activate
     
     Dim lastRow As Long
     Dim i As Long
@@ -27,40 +22,30 @@ Sub 派件費計算與分發()
     
     lastRow = ws.Cells(ws.Rows.Count, "G").End(xlUp).Row
     
-    ' ==========================================
-    ' 替換人名，非名單內的人員「整列刪除」
-    ' (已移除：林昱昇、譚毓麟、侯奕坊)
-    ' ==========================================
     Dim empID As String
     For i = lastRow To 2 Step -1
         empID = Trim(CStr(ws.Cells(i, "B").Value))
         If empID <> "" Then
             Select Case empID
-                Case "21094053": ws.Cells(i, "B").Value = "林彥廷"
-                Case "20298022": ws.Cells(i, "B").Value = "高鄭旺"
-                Case "21002102": ws.Cells(i, "B").Value = "陳育賓"
-                Case "20260504": ws.Cells(i, "B").Value = "蔡經邦"
-                Case "20903101": ws.Cells(i, "B").Value = "蕭先財"
-                Case "20296012": ws.Cells(i, "B").Value = "謝明憲"
-                Case "20997083": ws.Cells(i, "B").Value = "林茂競"
-                Case "20220418": ws.Cells(i, "B").Value = "張振發"
-                Case "20251117": ws.Cells(i, "B").Value = "詹錫熏"
-                Case "21192074": ws.Cells(i, "B").Value = "梁志強"
+    ' ==========================================
+    ' ★【編輯區】在這裡修改派送員編號與對應人名
+    ' ==========================================
+                ' ★ 格式如下： Case "這裡寫人員編號": ws.Cells(i, "B").Value = "這裡寫人名"
+                ' ★ 例如：派送員溫正杭的人員編號是20240513，所以是 Case "20240513": ws.Cells(i, "B").Value = "溫正杭"
+                ' ★ 可以自行增加或減少人數，多寫幾行或刪掉幾行即可。
+                ' ★ 沒有在以下名單內的資料，會在運算過程中被刪除。
                 Case "20240513": ws.Cells(i, "B").Value = "溫正杭"
-                Case "20250324": ws.Cells(i, "B").Value = "戴勝堂"
-                Case "20250825": ws.Cells(i, "B").Value = "謝文川"
-                Case "20290022": ws.Cells(i, "B").Value = "牟善賢"
-                Case "20997092": ws.Cells(i, "B").Value = "吳萌瑜"
-                Case "20260305": ws.Cells(i, "B").Value = "郭香蘭"
-                Case "20296021": ws.Cells(i, "B").Value = "詹益全"
-                Case "21005222": ws.Cells(i, "B").Value = "鄒樂勳"
-                Case "20289041": ws.Cells(i, "B").Value = "趙克強"
-                Case "20240710": ws.Cells(i, "B").Value = "蔡俊傑"
+                Case "12345678": ws.Cells(i, "B").Value = "人員一"
+                Case "22345678": ws.Cells(i, "B").Value = "人員二"
+                Case "32345678": ws.Cells(i, "B").Value = "人員三"
+                Case "42345678": ws.Cells(i, "B").Value = "人員四"
+                Case "52345678": ws.Cells(i, "B").Value = "人員五"
+                Case "62345678": ws.Cells(i, "B").Value = "人員六"
                 
-                ' 保護名單也一併移除上述三人
-                Case "林彥廷", "高鄭旺", "陳育賓", "蔡經邦", "蕭先財", "謝明憲", "林茂競", _
-                     "張振發", "詹錫熏", "梁志強", "溫正杭", "戴勝堂", "謝文川", "牟善賢", "吳萌瑜", _
-                     "郭香蘭", "詹益全", "鄒樂勳", "趙克強", "蔡俊傑"
+                ' ★ 這裡也要跟著修改。
+                Case "溫正杭", "人員一", "人員二", _
+                     "人員三", "人員四", _
+                     "人員五", "人員六"
                 Case Else
                     ws.Rows(i).Delete
             End Select
@@ -72,10 +57,7 @@ Sub 派件費計算與分發()
         Application.ScreenUpdating = True
         Exit Sub
     End If
-    
-    ' ==========================================
-    ' 將資料分組計算
-    ' ==========================================
+
     Dim key As String
     Dim dateStr As String
     
@@ -155,9 +137,6 @@ Sub 派件費計算與分發()
         Next r
     Next vKey
     
-    ' ==========================================
-    ' 漏斗表格式設定與凍結視窗
-    ' ==========================================
     ws.Range("G1").Value = "總重"
     ws.Range("H1").Value = "首重"
     ws.Range("I1").Value = "續重"
@@ -195,8 +174,7 @@ Sub 派件費計算與分發()
     ws.Columns("J").ColumnWidth = 7
     ws.Columns("K").ColumnWidth = 7
     ws.Columns("L").ColumnWidth = 7
-    
-    ' 凍結漏斗表第一列
+
     ws.Activate
     With ActiveWindow
         If .FreezePanes Then .FreezePanes = False
@@ -204,8 +182,7 @@ Sub 派件費計算與分發()
         .SplitRow = 1
         .FreezePanes = True
     End With
-    
-    ' 總表排序
+
     With ws.Sort
         .SortFields.Clear
         .SortFields.Add key:=ws.Range("A2:A" & lastRow), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
@@ -216,10 +193,7 @@ Sub 派件費計算與分發()
         .SortMethod = xlPinYin
         .Apply
     End With
-    
-    ' ==========================================
-    ' 智慧分發與累積至各派送員分表
-    ' ==========================================
+
     Dim nameDict As Object
     Set nameDict = CreateObject("Scripting.Dictionary")
     Dim pName As String
@@ -251,17 +225,14 @@ Sub 派件費計算與分發()
             Set newWs = wb.Sheets.Add(After:=wb.Sheets(wb.Sheets.Count))
             newWs.Name = CStr(vName2)
         End If
-        
-        ' 找出該表最後一列
+
         empLastRow = newWs.Cells(newWs.Rows.Count, "A").End(xlUp).Row
         
-        ' ★ 匯入前防呆：清除舊的加總列 (檢查 A欄或E欄 是否有"加總")
         If empLastRow > 1 And (newWs.Cells(empLastRow, "A").Value = "加總" Or newWs.Cells(empLastRow, "E").Value = "加總") Then
             newWs.Rows(empLastRow).Delete
             empLastRow = empLastRow - 1
         End If
-        
-        ' 複製新資料過去
+
         ws.Range("A1:L" & lastRow).AutoFilter Field:=2, Criteria1:=CStr(vName2)
         If ws.Range("A1:L" & lastRow).Columns(1).SpecialCells(xlCellTypeVisible).Count > 1 Then
             ws.Range("A2:L" & lastRow).SpecialCells(xlCellTypeVisible).Copy Destination:=newWs.Range("A" & empLastRow + 1)
@@ -270,28 +241,23 @@ Sub 派件費計算與分發()
         empLastRow = newWs.Cells(newWs.Rows.Count, "A").End(xlUp).Row
         
         If empLastRow > 1 Then
-            ' ==========================================
-            ' ★ 智慧去重：只看 A 到 G 欄，新資料覆蓋舊資料
-            ' ==========================================
+
             Set dupDict = CreateObject("Scripting.Dictionary")
             For rDup = empLastRow To 2 Step -1
                 dupKey = newWs.Cells(rDup, 1).Value & "|" & newWs.Cells(rDup, 2).Value & "|" & _
                          newWs.Cells(rDup, 3).Value & "|" & newWs.Cells(rDup, 4).Value & "|" & _
                          newWs.Cells(rDup, 5).Value & "|" & newWs.Cells(rDup, 6).Value & "|" & _
                          newWs.Cells(rDup, 7).Value
-                
-                ' 如果字典已經有這個組合(代表下方有最新的一筆)，就刪掉這筆舊的
+
                 If dupDict.Exists(dupKey) Then
                     newWs.Rows(rDup).Delete
                 Else
                     dupDict.Add dupKey, 1
                 End If
             Next rDup
-            
-            ' 重新抓取去重後的最後一列
+
             empLastRow = newWs.Cells(newWs.Rows.Count, "A").End(xlUp).Row
-            
-            ' 重新排序 (依時間)
+
             With newWs.Sort
                 .SortFields.Clear
                 .SortFields.Add key:=newWs.Range("A2:A" & empLastRow), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
@@ -302,22 +268,16 @@ Sub 派件費計算與分發()
                 .SortMethod = xlPinYin
                 .Apply
             End With
-            
-            ' ==========================================
-            ' 分表格式全面設定 (包含加總列)
-            ' ==========================================
-            ' 標題列
+
             ws.Range("A1:L1").Copy Destination:=newWs.Range("A1")
             newWs.Rows(1).RowHeight = 30
-            
-            ' 字體與對齊
+
             With newWs.Cells
                 .Font.Name = "新細明體"
                 .Font.Size = 11
                 .HorizontalAlignment = xlLeft
             End With
-            
-            ' 欄寬
+
             newWs.Columns("A").ColumnWidth = 16
             newWs.Columns("B").ColumnWidth = 8
             newWs.Columns("C").ColumnWidth = 19
@@ -330,21 +290,18 @@ Sub 派件費計算與分發()
             newWs.Columns("J").ColumnWidth = 7
             newWs.Columns("K").ColumnWidth = 7
             newWs.Columns("L").ColumnWidth = 7
-            
-            ' 資料與加總列的顏色 (延伸到 empLastRow + 1)
+
             newWs.Range("G2:G" & empLastRow + 1).Interior.Color = RGB(181, 216, 204)
             newWs.Range("H2:I" & empLastRow + 1).Interior.Color = RGB(249, 247, 243)
             newWs.Range("J2:K" & empLastRow + 1).Interior.Color = RGB(239, 226, 174)
             newWs.Range("L2:L" & empLastRow + 1).Interior.Color = RGB(248, 170, 128)
-            
-            ' ★ 寫入加總列
+
             With newWs.Cells(empLastRow + 1, "E")
                 .Value = "加總"
                 .HorizontalAlignment = xlRight
             End With
-            newWs.Rows(empLastRow + 1).Font.Bold = True ' 整列粗體
-            
-            ' F到L欄寫入加總公式並加上框線
+            newWs.Rows(empLastRow + 1).Font.Bold = True 
+
             For colIndex = 6 To 12
                 newWs.Cells(empLastRow + 1, colIndex).Formula = "=SUM(" & newWs.Cells(2, colIndex).Address(False, False) & ":" & newWs.Cells(empLastRow, colIndex).Address(False, False) & ")"
             Next colIndex
@@ -353,8 +310,7 @@ Sub 派件費計算與分發()
                 .LineStyle = xlContinuous
                 .Weight = xlThin
             End With
-            
-            ' 凍結分表第一列
+
             newWs.Activate
             With ActiveWindow
                 If .FreezePanes Then .FreezePanes = False
@@ -376,30 +332,24 @@ End Sub
 
 Sub 清空漏斗資料()
     Dim ws As Worksheet
-    
-    ' 尋找並鎖定「漏斗」工作表
+
     On Error Resume Next
     Set ws = ActiveWorkbook.Sheets("漏斗")
     On Error GoTo 0
-    
-    ' 防呆：如果找不到漏斗工作表，跳出提醒
+
     If ws Is Nothing Then
         MsgBox "找不到名為「漏斗」的工作表。", vbExclamation
         Exit Sub
     End If
-    
-    ' 關閉螢幕更新
+
     Application.ScreenUpdating = False
-    
-    ' 直接清除整張工作表的所有內容、格式、顏色與框線 (包含標題列)
+
     ws.Cells.Clear
-    
-    ' 將畫面切換回漏斗表，並選取 A1 儲存格，方便你直接按 Ctrl+V 貼上包含標題的資料
+
     ws.Activate
     ws.Range("A1").Select
     
     Application.ScreenUpdating = True
-    
-    ' 成功提示
+
     MsgBox "漏斗工作表已清空", vbInformation
 End Sub

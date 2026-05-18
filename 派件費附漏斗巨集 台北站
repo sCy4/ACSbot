@@ -1,0 +1,405 @@
+Sub 派件費計算與分發()
+    Dim ws As Worksheet
+    Dim wb As Workbook
+    Set wb = ActiveWorkbook
+    
+    ' 關閉螢幕更新加速運行，避免畫面閃爍
+    Application.ScreenUpdating = False
+    
+    ' ==========================================
+    ' ★ 防呆機制：強制鎖定 "漏斗" 總表
+    ' ==========================================
+    On Error Resume Next
+    Set ws = wb.Sheets("漏斗")
+    On Error GoTo 0
+    
+    If ws Is Nothing Then
+        ' 如果找不到叫漏斗的表，就把當前啟用的表當成漏斗並改名
+        Set ws = ActiveSheet
+        ws.Name = "漏斗"
+    End If
+    ws.Activate ' 強制啟用漏斗表，確保後續設定生效
+    
+    Dim lastRow As Long
+    Dim i As Long
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    lastRow = ws.Cells(ws.Rows.Count, "G").End(xlUp).Row
+    
+    ' ==========================================
+    ' 替換人名，非名單內的人員「整列刪除」
+    ' (已移除：林昱昇、譚毓麟、侯奕坊)
+    ' ==========================================
+    Dim empID As String
+    For i = lastRow To 2 Step -1
+        empID = Trim(CStr(ws.Cells(i, "B").Value))
+        If empID <> "" Then
+            Select Case empID
+                Case "21094053": ws.Cells(i, "B").Value = "林彥廷"
+                Case "20298022": ws.Cells(i, "B").Value = "高鄭旺"
+                Case "21002102": ws.Cells(i, "B").Value = "陳育賓"
+                Case "20260504": ws.Cells(i, "B").Value = "蔡經邦"
+                Case "20903101": ws.Cells(i, "B").Value = "蕭先財"
+                Case "20296012": ws.Cells(i, "B").Value = "謝明憲"
+                Case "20997083": ws.Cells(i, "B").Value = "林茂競"
+                Case "20220418": ws.Cells(i, "B").Value = "張振發"
+                Case "20251117": ws.Cells(i, "B").Value = "詹錫熏"
+                Case "21192074": ws.Cells(i, "B").Value = "梁志強"
+                Case "20240513": ws.Cells(i, "B").Value = "溫正杭"
+                Case "20250324": ws.Cells(i, "B").Value = "戴勝堂"
+                Case "20250825": ws.Cells(i, "B").Value = "謝文川"
+                Case "20290022": ws.Cells(i, "B").Value = "牟善賢"
+                Case "20997092": ws.Cells(i, "B").Value = "吳萌瑜"
+                Case "20260305": ws.Cells(i, "B").Value = "郭香蘭"
+                Case "20296021": ws.Cells(i, "B").Value = "詹益全"
+                Case "21005222": ws.Cells(i, "B").Value = "鄒樂勳"
+                Case "20289041": ws.Cells(i, "B").Value = "趙克強"
+                Case "20240710": ws.Cells(i, "B").Value = "蔡俊傑"
+                
+                ' 保護名單也一併移除上述三人
+                Case "林彥廷", "高鄭旺", "陳育賓", "蔡經邦", "蕭先財", "謝明憲", "林茂競", _
+                     "張振發", "詹錫熏", "梁志強", "溫正杭", "戴勝堂", "謝文川", "牟善賢", "吳萌瑜", _
+                     "郭香蘭", "詹益全", "鄒樂勳", "趙克強", "蔡俊傑"
+                Case Else
+                    ws.Rows(i).Delete
+            End Select
+        End If
+    Next i
+    
+    lastRow = ws.Cells(ws.Rows.Count, "G").End(xlUp).Row
+    If lastRow < 2 Then
+        Application.ScreenUpdating = True
+        Exit Sub
+    End If
+    
+    ' ==========================================
+    ' 將資料分組計算
+    ' ==========================================
+    Dim key As String
+    Dim dateStr As String
+    
+    For i = 2 To lastRow
+        If IsDate(ws.Cells(i, "A").Value) Then
+            dateStr = Format(ws.Cells(i, "A").Value, "yyyy/mm/dd")
+        Else
+            dateStr = ws.Cells(i, "A").Text
+        End If
+        key = dateStr & "|" & ws.Cells(i, "B").Value & "|" & ws.Cells(i, "E").Value
+        If Not dict.Exists(key) Then dict.Add key, New Collection
+        dict(key).Add i
+    Next i
+    
+    Dim vKey As Variant, r As Variant
+    Dim maxRow As Long, maxG As Double, currentG As Double
+    Dim origG As Double, feeJ As Double, feeK As Double
+    Dim isGroup As Boolean
+    
+    For Each vKey In dict.Keys
+        isGroup = (dict(vKey).Count > 1)
+        maxRow = dict(vKey).Item(1)
+        If IsNumeric(ws.Cells(maxRow, "G").Value) And Not IsEmpty(ws.Cells(maxRow, "G").Value) Then maxG = ws.Cells(maxRow, "G").Value Else maxG = 0
+        
+        For Each r In dict(vKey)
+            If IsNumeric(ws.Cells(r, "G").Value) And Not IsEmpty(ws.Cells(r, "G").Value) Then currentG = ws.Cells(r, "G").Value Else currentG = 0
+            If currentG > maxG Then
+                maxG = currentG
+                maxRow = r
+            End If
+        Next r
+        
+        For Each r In dict(vKey)
+            If isGroup Then
+                ws.Range(ws.Cells(r, "A"), ws.Cells(r, "F")).Interior.Color = RGB(190, 229, 250)
+            Else
+                ws.Range(ws.Cells(r, "A"), ws.Cells(r, "F")).Interior.Pattern = xlNone
+            End If
+            
+            If IsNumeric(ws.Cells(r, "G").Value) And Not IsEmpty(ws.Cells(r, "G").Value) Then
+                origG = Application.WorksheetFunction.Round(ws.Cells(r, "G").Value, 2)
+            Else
+                origG = 0
+            End If
+            
+            feeJ = 0
+            feeK = 0
+            
+            If r = maxRow Then
+                If origG >= 10 Then
+                    ws.Cells(r, "H").Value = 10
+                    ws.Cells(r, "I").Value = Application.WorksheetFunction.Round(origG - 10, 2)
+                Else
+                    ws.Cells(r, "H").Value = origG
+                    ws.Cells(r, "I").Value = 0
+                End If
+                feeJ = 10
+                feeK = Application.WorksheetFunction.Round(ws.Cells(r, "I").Value * 0.3, 2)
+                If feeK > 0 And feeK < 3 Then feeK = 3
+                
+                ws.Cells(r, "J").Value = feeJ
+                If feeK = 0 Then ws.Cells(r, "K").Value = "" Else ws.Cells(r, "K").Value = feeK
+                ws.Cells(r, "L").Value = Application.WorksheetFunction.Round(feeJ + feeK, 2)
+                If ws.Cells(r, "I").Value = 0 Then ws.Cells(r, "I").Value = ""
+            Else
+                ws.Cells(r, "H").Value = ""
+                ws.Cells(r, "I").Value = origG
+                ws.Cells(r, "J").Value = ""
+                
+                feeK = Application.WorksheetFunction.Round(ws.Cells(r, "I").Value * 0.3, 2)
+                If feeK > 0 And feeK < 3 Then feeK = 3
+                
+                If feeK = 0 Then ws.Cells(r, "K").Value = "" Else ws.Cells(r, "K").Value = feeK
+                ws.Cells(r, "L").Value = feeK
+                If ws.Cells(r, "I").Value = 0 Then ws.Cells(r, "I").Value = ""
+            End If
+        Next r
+    Next vKey
+    
+    ' ==========================================
+    ' 漏斗表格式設定與凍結視窗
+    ' ==========================================
+    ws.Range("G1").Value = "總重"
+    ws.Range("H1").Value = "首重"
+    ws.Range("I1").Value = "續重"
+    ws.Range("J1").Value = "首重費"
+    ws.Range("K1").Value = "續重費"
+    ws.Range("L1").Value = "派件費"
+    
+    With ws.Cells
+        .Font.Name = "新細明體"
+        .Font.Size = 11
+        .HorizontalAlignment = xlLeft
+    End With
+    ws.Range("G2:L" & lastRow).NumberFormat = "General"
+    
+    ws.Range("G2:G" & lastRow).Interior.Color = RGB(181, 216, 204)
+    ws.Range("H2:I" & lastRow).Interior.Color = RGB(249, 247, 243)
+    ws.Range("J2:K" & lastRow).Interior.Color = RGB(239, 226, 174)
+    ws.Range("L2:L" & lastRow).Interior.Color = RGB(248, 170, 128)
+    
+    With ws.Range("A1:L1")
+        .Interior.Color = RGB(12, 110, 163)
+        .Font.Color = vbWhite
+    End With
+    ws.Rows(1).RowHeight = 30
+    
+    ws.Columns("A").ColumnWidth = 16
+    ws.Columns("B").ColumnWidth = 8
+    ws.Columns("C").ColumnWidth = 19
+    ws.Columns("D").ColumnWidth = 18
+    ws.Columns("E").ColumnWidth = 48
+    ws.Columns("F").ColumnWidth = 5
+    ws.Columns("G").ColumnWidth = 5
+    ws.Columns("H").ColumnWidth = 5
+    ws.Columns("I").ColumnWidth = 5
+    ws.Columns("J").ColumnWidth = 7
+    ws.Columns("K").ColumnWidth = 7
+    ws.Columns("L").ColumnWidth = 7
+    
+    ' 凍結漏斗表第一列
+    ws.Activate
+    With ActiveWindow
+        If .FreezePanes Then .FreezePanes = False
+        .SplitColumn = 0
+        .SplitRow = 1
+        .FreezePanes = True
+    End With
+    
+    ' 總表排序
+    With ws.Sort
+        .SortFields.Clear
+        .SortFields.Add key:=ws.Range("A2:A" & lastRow), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+        .SetRange ws.Range("A1:L" & lastRow)
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+    
+    ' ==========================================
+    ' 智慧分發與累積至各派送員分表
+    ' ==========================================
+    Dim nameDict As Object
+    Set nameDict = CreateObject("Scripting.Dictionary")
+    Dim pName As String
+    
+    For i = 2 To lastRow
+        pName = Trim(CStr(ws.Cells(i, "B").Value))
+        If pName <> "" Then
+            If Not nameDict.Exists(pName) Then nameDict.Add pName, 1
+        End If
+    Next i
+    
+    Dim newWs As Worksheet
+    Dim vName2 As Variant
+    Dim empLastRow As Long
+    Dim dupDict As Object
+    Dim rDup As Long
+    Dim dupKey As String
+    Dim colIndex As Integer
+    
+    Application.DisplayAlerts = False
+    
+    For Each vName2 In nameDict.Keys
+        Set newWs = Nothing
+        On Error Resume Next
+        Set newWs = wb.Sheets(CStr(vName2))
+        On Error GoTo 0
+        
+        If newWs Is Nothing Then
+            Set newWs = wb.Sheets.Add(After:=wb.Sheets(wb.Sheets.Count))
+            newWs.Name = CStr(vName2)
+        End If
+        
+        ' 找出該表最後一列
+        empLastRow = newWs.Cells(newWs.Rows.Count, "A").End(xlUp).Row
+        
+        ' ★ 匯入前防呆：清除舊的加總列 (檢查 A欄或E欄 是否有"加總")
+        If empLastRow > 1 And (newWs.Cells(empLastRow, "A").Value = "加總" Or newWs.Cells(empLastRow, "E").Value = "加總") Then
+            newWs.Rows(empLastRow).Delete
+            empLastRow = empLastRow - 1
+        End If
+        
+        ' 複製新資料過去
+        ws.Range("A1:L" & lastRow).AutoFilter Field:=2, Criteria1:=CStr(vName2)
+        If ws.Range("A1:L" & lastRow).Columns(1).SpecialCells(xlCellTypeVisible).Count > 1 Then
+            ws.Range("A2:L" & lastRow).SpecialCells(xlCellTypeVisible).Copy Destination:=newWs.Range("A" & empLastRow + 1)
+        End If
+        
+        empLastRow = newWs.Cells(newWs.Rows.Count, "A").End(xlUp).Row
+        
+        If empLastRow > 1 Then
+            ' ==========================================
+            ' ★ 智慧去重：只看 A 到 G 欄，新資料覆蓋舊資料
+            ' ==========================================
+            Set dupDict = CreateObject("Scripting.Dictionary")
+            For rDup = empLastRow To 2 Step -1
+                dupKey = newWs.Cells(rDup, 1).Value & "|" & newWs.Cells(rDup, 2).Value & "|" & _
+                         newWs.Cells(rDup, 3).Value & "|" & newWs.Cells(rDup, 4).Value & "|" & _
+                         newWs.Cells(rDup, 5).Value & "|" & newWs.Cells(rDup, 6).Value & "|" & _
+                         newWs.Cells(rDup, 7).Value
+                
+                ' 如果字典已經有這個組合(代表下方有最新的一筆)，就刪掉這筆舊的
+                If dupDict.Exists(dupKey) Then
+                    newWs.Rows(rDup).Delete
+                Else
+                    dupDict.Add dupKey, 1
+                End If
+            Next rDup
+            
+            ' 重新抓取去重後的最後一列
+            empLastRow = newWs.Cells(newWs.Rows.Count, "A").End(xlUp).Row
+            
+            ' 重新排序 (依時間)
+            With newWs.Sort
+                .SortFields.Clear
+                .SortFields.Add key:=newWs.Range("A2:A" & empLastRow), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+                .SetRange newWs.Range("A1:L" & empLastRow)
+                .Header = xlYes
+                .MatchCase = False
+                .Orientation = xlTopToBottom
+                .SortMethod = xlPinYin
+                .Apply
+            End With
+            
+            ' ==========================================
+            ' 分表格式全面設定 (包含加總列)
+            ' ==========================================
+            ' 標題列
+            ws.Range("A1:L1").Copy Destination:=newWs.Range("A1")
+            newWs.Rows(1).RowHeight = 30
+            
+            ' 字體與對齊
+            With newWs.Cells
+                .Font.Name = "新細明體"
+                .Font.Size = 11
+                .HorizontalAlignment = xlLeft
+            End With
+            
+            ' 欄寬
+            newWs.Columns("A").ColumnWidth = 16
+            newWs.Columns("B").ColumnWidth = 8
+            newWs.Columns("C").ColumnWidth = 19
+            newWs.Columns("D").ColumnWidth = 18
+            newWs.Columns("E").ColumnWidth = 48
+            newWs.Columns("F").ColumnWidth = 5
+            newWs.Columns("G").ColumnWidth = 5
+            newWs.Columns("H").ColumnWidth = 5
+            newWs.Columns("I").ColumnWidth = 5
+            newWs.Columns("J").ColumnWidth = 7
+            newWs.Columns("K").ColumnWidth = 7
+            newWs.Columns("L").ColumnWidth = 7
+            
+            ' 資料與加總列的顏色 (延伸到 empLastRow + 1)
+            newWs.Range("G2:G" & empLastRow + 1).Interior.Color = RGB(181, 216, 204)
+            newWs.Range("H2:I" & empLastRow + 1).Interior.Color = RGB(249, 247, 243)
+            newWs.Range("J2:K" & empLastRow + 1).Interior.Color = RGB(239, 226, 174)
+            newWs.Range("L2:L" & empLastRow + 1).Interior.Color = RGB(248, 170, 128)
+            
+            ' ★ 寫入加總列
+            With newWs.Cells(empLastRow + 1, "E")
+                .Value = "加總"
+                .HorizontalAlignment = xlRight
+            End With
+            newWs.Rows(empLastRow + 1).Font.Bold = True ' 整列粗體
+            
+            ' F到L欄寫入加總公式並加上框線
+            For colIndex = 6 To 12
+                newWs.Cells(empLastRow + 1, colIndex).Formula = "=SUM(" & newWs.Cells(2, colIndex).Address(False, False) & ":" & newWs.Cells(empLastRow, colIndex).Address(False, False) & ")"
+            Next colIndex
+            
+            With newWs.Range(newWs.Cells(empLastRow + 1, "F"), newWs.Cells(empLastRow + 1, "L")).Borders
+                .LineStyle = xlContinuous
+                .Weight = xlThin
+            End With
+            
+            ' 凍結分表第一列
+            newWs.Activate
+            With ActiveWindow
+                If .FreezePanes Then .FreezePanes = False
+                .SplitColumn = 0
+                .SplitRow = 1
+                .FreezePanes = True
+            End With
+        End If
+    Next vName2
+    
+    ws.AutoFilterMode = False
+    ws.Activate
+    
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    
+    MsgBox "計算並分發完成", vbInformation
+End Sub
+
+Sub 清空漏斗資料()
+    Dim ws As Worksheet
+    
+    ' 尋找並鎖定「漏斗」工作表
+    On Error Resume Next
+    Set ws = ActiveWorkbook.Sheets("漏斗")
+    On Error GoTo 0
+    
+    ' 防呆：如果找不到漏斗工作表，跳出提醒
+    If ws Is Nothing Then
+        MsgBox "找不到名為「漏斗」的工作表。", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 關閉螢幕更新
+    Application.ScreenUpdating = False
+    
+    ' 直接清除整張工作表的所有內容、格式、顏色與框線 (包含標題列)
+    ws.Cells.Clear
+    
+    ' 將畫面切換回漏斗表，並選取 A1 儲存格，方便你直接按 Ctrl+V 貼上包含標題的資料
+    ws.Activate
+    ws.Range("A1").Select
+    
+    Application.ScreenUpdating = True
+    
+    ' 成功提示
+    MsgBox "漏斗工作表已清空", vbInformation
+End Sub

@@ -1,0 +1,21 @@
+const FILE_DATABASE = {
+  '派件費': {
+    url: 'https://raw.githubusercontent.com/sCy4/ACSbot/refs/heads/main/%E5%A4%96%E5%8B%99%E6%B4%BE%E4%BB%B6%E8%B2%BB%20%E9%99%84%E6%BC%8F%E6%96%97.xlsm',
+    name: '派件費資料測試1.xlsm'
+  },
+  '清關報告幫手': {  
+    url: 'https://github.com/sCy4/ACStoolsbyGemini/releases/latest/download/ClearFlow.exe',
+    name: '清關報告幫手.exe'
+  }
+};
+
+const FILE_DATABASE = {
+  '派件費': {
+    url: 'https://raw.githubusercontent.com/sCy4/ACSbot/refs/heads/main/%E5%A4%96%E5%8B%99%E6%B4%BE%E4%BB%B6%E8%B2%BB%20%E9%99%84%E6%BC%8F%E6%96%97.xlsm',
+    name: '派件費資料測試1.xlsm'
+  },
+  '清關報告幫手': {  
+    url: 'https://github.com/sCy4/ACStoolsbyGemini/releases/latest/download/ClearFlow.exe',
+    name: '清關報告幫手.exe'
+  }
+};

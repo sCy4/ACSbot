@@ -181,7 +181,7 @@
       setStatus('');
       grid.innerHTML = images.map(img =>
         '<div class="thumb">' +
-          '<img src="data:' + img.mimeType + ';base64,' + img.base64 + '" alt="' + escapeHtml(img.trackingNumber) + '">' +
+          '<img loading="lazy" src="' + img.thumbnailUrl + '" alt="' + escapeHtml(img.trackingNumber) + '">' +
           '<div class="caption">' + escapeHtml(img.trackingNumber) + '</div>' +
         '</div>'
       ).join('');
@@ -204,16 +204,23 @@
       }[c]));
     }
 
-    function downloadOne(img) {
-      return new Promise(resolve => {
+    // 透過 fetch 取得圖片並用 Blob 觸發下載,確保檔名生效
+    async function downloadOne(img) {
+      try {
+        const res = await fetch(img.fullUrl);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = 'data:' + img.mimeType + ';base64,' + img.base64;
+        a.href = url;
         a.download = img.trackingNumber + '.jpg';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        resolve();
-      });
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.error('下載失敗:', img.trackingNumber, err);
+      }
     }
 
     document.getElementById('downloadBtn').addEventListener('click', async () => {

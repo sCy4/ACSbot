@@ -204,23 +204,45 @@
       }[c]));
     }
 
-    // 透過 fetch 取得圖片並用 Blob 觸發下載,確保檔名生效
-    async function downloadOne(img) {
-      try {
-        const res = await fetch(img.fullUrl);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = img.trackingNumber + '.jpg';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      } catch (err) {
-        console.error('下載失敗:', img.trackingNumber, err);
-      }
+   // 透過 GAS 代理拿圖片(避免 CORS,並確保檔名生效)
+    function downloadOne(img) {
+      return new Promise(resolve => {
+        const callbackName = 'jsonpImg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+
+        const cleanup = () => {
+          delete window[callbackName];
+          if (scriptTag.parentNode) scriptTag.parentNode.removeChild(scriptTag);
+        };
+
+        window[callbackName] = function(data) {
+          cleanup();
+          if (data.error || !data.base64) {
+            console.error('取得圖片失敗:', img.trackingNumber, data.error);
+            resolve();
+            return;
+          }
+          const a = document.createElement('a');
+          a.href = 'data:' + data.mimeType + ';base64,' + data.base64;
+          a.download = img.trackingNumber + '.jpg';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          resolve();
+        };
+
+        const scriptTag = document.createElement('script');
+        scriptTag.src = GAS_URL +
+          '?action=image' +
+          '&callback=' + callbackName +
+          '&user=' + encodeURIComponent(USER_ID) +
+          '&num=' + encodeURIComponent(img.trackingNumber);
+        scriptTag.onerror = function() {
+          cleanup();
+          console.error('連線失敗:', img.trackingNumber);
+          resolve();
+        };
+        document.head.appendChild(scriptTag);
+      });
     }
 
     document.getElementById('downloadBtn').addEventListener('click', async () => {

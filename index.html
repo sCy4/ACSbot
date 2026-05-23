@@ -26,8 +26,13 @@
       margin: 0 0 20px;
       color: #1f2328;
     }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
     .btn {
-      width: 100%;
+      flex: 1;
       padding: 12px 16px;
       font-size: 14px;
       font-weight: 500;
@@ -36,7 +41,6 @@
       border: 1px solid rgba(31, 35, 40, 0.15);
       border-radius: 6px;
       cursor: pointer;
-      margin-bottom: 20px;
       transition: background-color 0.15s;
     }
     .btn:hover:not(:disabled) { background: #1a7f37; }
@@ -45,6 +49,26 @@
       color: #ffffff;
       cursor: not-allowed;
     }
+    .btn-secondary {
+      background: #f6f8fa;
+      color: #1f2328;
+      border: 1px solid #d1d9e0;
+    }
+    .btn-secondary:hover:not(:disabled) { background: #eef0f3; }
+    .btn-secondary:disabled {
+      background: #f6f8fa;
+      color: #8c959f;
+    }
+    .folder-info {
+      font-size: 13px;
+      color: #59636e;
+      margin-bottom: 20px;
+      padding: 8px 12px;
+      background: #f6f8fa;
+      border: 1px solid #d1d9e0;
+      border-radius: 6px;
+    }
+    .folder-info.active { color: #1a7f37; border-color: #94d3a2; }
     .notfound {
       font-size: 13px;
       color: #82071e;
@@ -96,13 +120,20 @@
     @media (max-width: 640px) {
       .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .container { padding: 20px 16px; }
+      .actions { flex-direction: column; }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>簽收圖下載</h1>
-    <button class="btn" id="downloadBtn" disabled>載入中…</button>
+
+    <div class="actions">
+      <button class="btn btn-secondary" id="folderBtn">選擇下載資料夾</button>
+      <button class="btn" id="downloadBtn" disabled>載入中…</button>
+    </div>
+
+    <div class="folder-info" id="folderInfo">尚未選擇資料夾 — 將下載到瀏覽器預設位置</div>
     <div id="notfound"></div>
     <div id="status" class="status">準備中…</div>
     <div class="grid" id="grid"></div>
@@ -120,12 +151,56 @@
     const NUMS = params.get('nums') || '';
 
     let imagesData = [];
+    let selectedFolder = null; // FileSystemDirectoryHandle
+
+    // 偵測瀏覽器是否支援 File System Access API
+    const fsApiSupported = 'showDirectoryPicker' in window;
 
     function setStatus(text, isError) {
       const el = document.getElementById('status');
       el.textContent = text;
       el.className = isError ? 'status error' : 'status';
     }
+
+    function updateFolderInfo() {
+      const el = document.getElementById('folderInfo');
+      if (selectedFolder) {
+        el.textContent = '將下載到:' + selectedFolder.name;
+        el.className = 'folder-info active';
+      } else {
+        if (fsApiSupported) {
+          el.textContent = '尚未選擇資料夾 — 將下載到瀏覽器預設位置';
+        } else {
+          el.textContent = '此瀏覽器不支援自訂下載位置 — 將下載到瀏覽器預設位置';
+        }
+        el.className = 'folder-info';
+      }
+    }
+
+    // 「選擇下載資料夾」按鈕
+    document.getElementById('folderBtn').addEventListener('click', async () => {
+      if (!fsApiSupported) {
+        alert('此瀏覽器不支援選擇資料夾功能,請改用 Chrome 或 Edge');
+        return;
+      }
+      try {
+        const handle = await window.showDirectoryPicker({
+          mode: 'readwrite',
+          startIn: 'desktop'
+        });
+        const perm = await handle.requestPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') {
+          alert('未授予寫入權限');
+          return;
+        }
+        selectedFolder = handle;
+        updateFolderInfo();
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('選擇資料夾失敗:', err);
+        }
+      }
+    });
 
     function loadImages() {
       if (!USER_ID || !NUMS) {
@@ -204,7 +279,26 @@
       }[c]));
     }
 
-    function downloadOne(img) {
+    // base64 字串 → Uint8Array(供寫入用)
+    function base64ToBytes(base64) {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    // 寫入「選定的資料夾」
+    async function writeToFolder(img) {
+      const fileHandle = await selectedFolder.getFileHandle(img.trackingNumber + '.jpg', { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(base64ToBytes(img.base64));
+      await writable.close();
+    }
+
+    // 走瀏覽器預設下載
+    function downloadToDefault(img) {
       return new Promise(resolve => {
         const a = document.createElement('a');
         a.href = 'data:' + img.mimeType + ';base64,' + img.base64;
@@ -218,17 +312,34 @@
 
     document.getElementById('downloadBtn').addEventListener('click', async () => {
       const btn = document.getElementById('downloadBtn');
+      const folderBtn = document.getElementById('folderBtn');
       btn.disabled = true;
+      folderBtn.disabled = true;
       const total = imagesData.length;
+
       for (let i = 0; i < total; i++) {
+        const img = imagesData[i];
         btn.textContent = '下載中… ' + (i + 1) + ' / ' + total;
-        await downloadOne(imagesData[i]);
-        await new Promise(r => setTimeout(r, 250));
+        try {
+          if (selectedFolder) {
+            await writeToFolder(img);
+          } else {
+            await downloadToDefault(img);
+            await new Promise(r => setTimeout(r, 250));
+          }
+        } catch (err) {
+          console.error('下載失敗:', img.trackingNumber, err);
+        }
       }
+
       btn.textContent = '下載完成';
-      setTimeout(() => updateButton(), 1500);
+      setTimeout(() => {
+        folderBtn.disabled = false;
+        updateButton();
+      }, 1500);
     });
 
+    updateFolderInfo();
     loadImages();
   </script>
 </body>

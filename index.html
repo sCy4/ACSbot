@@ -205,14 +205,17 @@
     }
 
    // 透過 GAS 代理拿圖片(避免 CORS,並確保檔名生效)
-    function downloadOne(img) {
+function downloadOne(img) {
       return new Promise(resolve => {
-        const callbackName = 'jsonpImg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-
-        const cleanup = () => {
-          delete window[callbackName];
-          if (scriptTag.parentNode) scriptTag.parentNode.removeChild(scriptTag);
-        };
+        const a = document.createElement('a');
+        a.href = 'data:' + img.mimeType + ';base64,' + img.base64;
+        a.download = img.trackingNumber + '.jpg';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        resolve();
+      });
+    }
 
         window[callbackName] = function(data) {
           cleanup();

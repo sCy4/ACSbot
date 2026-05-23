@@ -59,6 +59,18 @@
       background: #f6f8fa;
       color: #8c959f;
     }
+    .btn-reset {
+      flex: 0 0 auto;
+      background: #ffffff;
+      color: #59636e;
+      border: 1px solid #d1d9e0;
+    }
+    .btn-reset:hover:not(:disabled) { background: #f6f8fa; color: #1f2328; }
+    .btn-reset:disabled {
+      background: #ffffff;
+      color: #c0c5cb;
+      border-color: #e6e8ea;
+    }
     .folder-info {
       font-size: 13px;
       color: #59636e;
@@ -121,6 +133,7 @@
       .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .container { padding: 20px 16px; }
       .actions { flex-direction: column; }
+      .btn-reset { flex: 1; }
     }
   </style>
 </head>
@@ -130,6 +143,7 @@
 
     <div class="actions">
       <button class="btn btn-secondary" id="folderBtn">選擇下載資料夾</button>
+      <button class="btn btn-reset" id="resetBtn" disabled>還原為預設</button>
       <button class="btn" id="downloadBtn" disabled>載入中…</button>
     </div>
 
@@ -151,9 +165,8 @@
     const NUMS = params.get('nums') || '';
 
     let imagesData = [];
-    let selectedFolder = null; // FileSystemDirectoryHandle
+    let selectedFolder = null;
 
-    // 偵測瀏覽器是否支援 File System Access API
     const fsApiSupported = 'showDirectoryPicker' in window;
 
     function setStatus(text, isError) {
@@ -164,9 +177,11 @@
 
     function updateFolderInfo() {
       const el = document.getElementById('folderInfo');
+      const resetBtn = document.getElementById('resetBtn');
       if (selectedFolder) {
         el.textContent = '將下載到:' + selectedFolder.name;
         el.className = 'folder-info active';
+        resetBtn.disabled = false;
       } else {
         if (fsApiSupported) {
           el.textContent = '尚未選擇資料夾 — 將下載到瀏覽器預設位置';
@@ -174,10 +189,10 @@
           el.textContent = '此瀏覽器不支援自訂下載位置 — 將下載到瀏覽器預設位置';
         }
         el.className = 'folder-info';
+        resetBtn.disabled = true;
       }
     }
 
-    // 「選擇下載資料夾」按鈕
     document.getElementById('folderBtn').addEventListener('click', async () => {
       if (!fsApiSupported) {
         alert('此瀏覽器不支援選擇資料夾功能,請改用 Chrome 或 Edge');
@@ -196,10 +211,22 @@
         selectedFolder = handle;
         updateFolderInfo();
       } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error('選擇資料夾失敗:', err);
+        if (err.name === 'AbortError') return;
+        if (err.name === 'SecurityError' ||
+            (err.message && err.message.indexOf('system files') !== -1)) {
+          alert('Chrome 不允許網頁直接存取「桌面、文件、下載」等系統資料夾。\n\n' +
+                '請先在桌面建立一個子資料夾(例如「LINE圖片」),再選擇該資料夾即可。');
+          return;
         }
+        console.error('選擇資料夾失敗:', err);
+        alert('選擇失敗:' + err.message);
       }
+    });
+
+    // 「還原為預設」按鈕
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      selectedFolder = null;
+      updateFolderInfo();
     });
 
     function loadImages() {
@@ -279,7 +306,6 @@
       }[c]));
     }
 
-    // base64 字串 → Uint8Array(供寫入用)
     function base64ToBytes(base64) {
       const binary = atob(base64);
       const bytes = new Uint8Array(binary.length);
@@ -289,7 +315,6 @@
       return bytes;
     }
 
-    // 寫入「選定的資料夾」
     async function writeToFolder(img) {
       const fileHandle = await selectedFolder.getFileHandle(img.trackingNumber + '.jpg', { create: true });
       const writable = await fileHandle.createWritable();
@@ -297,7 +322,6 @@
       await writable.close();
     }
 
-    // 走瀏覽器預設下載
     function downloadToDefault(img) {
       return new Promise(resolve => {
         const a = document.createElement('a');
@@ -313,8 +337,10 @@
     document.getElementById('downloadBtn').addEventListener('click', async () => {
       const btn = document.getElementById('downloadBtn');
       const folderBtn = document.getElementById('folderBtn');
+      const resetBtn = document.getElementById('resetBtn');
       btn.disabled = true;
       folderBtn.disabled = true;
+      resetBtn.disabled = true;
       const total = imagesData.length;
 
       for (let i = 0; i < total; i++) {
@@ -335,6 +361,7 @@
       btn.textContent = '下載完成';
       setTimeout(() => {
         folderBtn.disabled = false;
+        updateFolderInfo(); // 會自動處理 resetBtn 的狀態
         updateButton();
       }, 1500);
     });

@@ -1,0 +1,72 @@
+[Sign]
+Count=2
+Title1=已簽收
+Code1=已簽收
+Title2=客指定位
+Code2=已放置客戶指定位置
+[Problem]
+Count=5
+Title1=電話無人接
+Code1=01
+Title2=另約派送日期
+Code2=ct
+Title3=更改地址
+Code3=ca
+Title4=收件人不在家
+Code4=36
+Title5=包裏破損
+Code5=BT
+[Monitor]
+GroupCount=2
+[Monitor.Group1]
+Name=北市十二位外務
+Count=12
+Title1=01. 西-溫正杭
+Code1=20240513
+Title2=02. 東-蔡俊傑
+Code2=20240710
+Title3=03. 西-戴勝堂
+Code3=20250324
+Title4=04. 東-郭香蘭
+Code4=20260305
+Title5=05. 東-趙克強
+Code5=20289041
+Title6=06. 東-牟善賢
+Code6=20290022
+Title7=07. 東-詹益全
+Code7=20296021
+Title8=08. 東-吳萌瑜
+Code8=20997092
+Title9=09. 東-鄒樂勳
+Code9=21005222
+Title10=10. 西-梁志強
+Code10=21192074
+Title11=11. 東-劉彥璋
+Code11=260603
+Title12=12. 東-洪森賢
+Code12=260604
+[Monitor.Group2]
+Name=七位外派
+Count=7
+Title1=機車快遞2
+Code1=MOTO2
+Title2=機車快遞5
+Code2=MOTO5
+Title3=機車快遞6
+Code3=MOTO6
+Title4=機車快遞8
+Code4=MOTO8
+Title5=機車快遞10
+Code5=MOTO10
+Title6=機車快遞12
+Code6=MOTO12
+Title7=機車快遞13
+Code7=MOTO13
+[PasteText]
+Count=3
+Title1=另約 6/25 (四)
+Code1=客戶另約派送日期：6/25 (四)
+Title2=客戶更改收件地址：
+Code2=客戶更改收件地址：
+Title3=北市<每日問題件回報>
+Code3=<<<每日問題件回報>>>\n日期：6/16\n超過六點後 問題件請自己入問題\n為了避免漏件 請配合!! 謝謝!!\n\n趙克強:\n牟善賢:\n詹益全:\n鄒樂勳:\n吳萌瑜:\n梁志強:\n温正杭:\n蔡俊傑:\n戴勝堂:\n郭香蘭:\n洪森賢:\n學長: \n--------------------請接龍

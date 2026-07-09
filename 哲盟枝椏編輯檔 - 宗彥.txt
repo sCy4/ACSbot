@@ -6,37 +6,22 @@ Code1=已簽收
 Title2=客指定位
 Code2=已放置客戶指定位置
 [Problem]
-Count=5
+Count=6
 Title1=電話無人接
 Code1=01
 Title2=另約派送日期
 Code2=ct
 Title3=更改地址
 Code3=ca
-Title4=收件人不在家
-Code4=36
-Title5=包裏破損
-Code5=BT
+Title4=地址錯誤
+Code4=97
+Title5=收件人不在家
+Code5=36
+Title6=包裏破損
+Code6=BT
 [Monitor]
 GroupCount=3
 [Monitor.Group1]
-Name=七位外派
-Count=7
-Title1=機車快遞2
-Code1=MOTO2
-Title2=機車快遞5
-Code2=MOTO5
-Title3=機車快遞6
-Code3=MOTO6
-Title4=機車快遞8
-Code4=MOTO8
-Title5=機車快遞10
-Code5=MOTO10
-Title6=機車快遞12
-Code6=MOTO12
-Title7=機車快遞13
-Code7=MOTO13
-[Monitor.Group2]
 Name=北市問題群
 Count=12
 Title1=01. 西-梁志強
@@ -63,7 +48,7 @@ Title11=11. 東-洪森賢
 Code11=260604
 Title12=12. 東-譚毓麟
 Code12=20200103
-[Monitor.Group3]
+[Monitor.Group2]
 Name=新北問題群
 Count=11
 Title1=01.中-林彥廷
@@ -88,10 +73,27 @@ Title10=10.五-施啟文
 Code10=20260602
 Title11=11.五-黃雅萍
 Code11=20997082
+[Monitor.Group3]
+Name=七位外派
+Count=7
+Title1=機車快遞2
+Code1=MOTO2
+Title2=機車快遞5
+Code2=MOTO5
+Title3=機車快遞6
+Code3=MOTO6
+Title4=機車快遞8
+Code4=MOTO8
+Title5=機車快遞10
+Code5=MOTO10
+Title6=機車快遞12
+Code6=MOTO12
+Title7=機車快遞13
+Code7=MOTO13
 [PasteText]
 Count=3
-Title1=另約 6/30 (二)
-Code1=客戶另約派送日期：6/30 (二)
+Title1=另約 7/10 (五)
+Code1=客戶另約派送日期：7/10 (五)
 Title2=客戶更改收件地址：
 Code2=客戶更改收件地址：
 Title3=北市<每日問題件回報>
